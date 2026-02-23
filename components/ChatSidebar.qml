@@ -22,7 +22,10 @@ Window {
 
   property var messages: [
       { role: "assistant", text: "Hola, ¿en qué te ayudo?" },
-      { role: "user", text: "Esto ya pinta bien 😄" }
+      { role: "user", text: "Esto ya pinta bien 😄" },
+      { role: "assistant", text: "¡Me alegra que te guste! Si tienes alguna pregunta o necesitas ayuda, no dudes en decírmelo." },
+      { role: "user", text: "¿Puedes contarme un chiste?" },
+      { role: "assistant", text: "¡Claro! Aquí tienes uno:\n\n¿Por qué los programadores confunden Halloween con Navidad?\n\nPorque OCT 31 es igual a DEC 25." }
   ]
 
   Rectangle {
@@ -66,23 +69,32 @@ Window {
           Repeater {
             model: root.messages
 
-            Rectangle {
+            Item {
+              id: messageRow
               width: messageColumn.width
-              implicitHeight: messageText.implicitHeight + 16
-              height: implicitHeight
-              radius: 8
-              color: modelData.role === "user" ? "#2a2a2a" : "#1e1e1e"
+              height: messageBubble.implicitHeight
 
-              Text {
-                id: messageText
-                text: modelData.text
-                color: "#fff"
-                font.pixelSize: 14
-                wrapMode: Text.Wrap
-                width: parent.width - 16
-                anchors.top: parent.top
-                anchors.left: parent.left
-                anchors.margins: 8
+              Rectangle {
+                id: messageBubble
+                width: Math.min(messageRow.width * 0.8, messageText.implicitWidth + 16)
+                implicitHeight: messageText.implicitHeight + 16
+                height: implicitHeight
+                radius: 8
+                color: modelData.role === "user" ? "#2a2a2a" : "#1e1e1e"
+                anchors.right: modelData.role === "user" ? parent.right : undefined
+                anchors.left: modelData.role === "assistant" ? parent.left : undefined
+
+                Text {
+                  id: messageText
+                  text: modelData.text
+                  color: "#fff"
+                  font.pixelSize: 14
+                  wrapMode: Text.Wrap
+                  width: parent.width - 16
+                  anchors.top: parent.top
+                  anchors.left: parent.left
+                  anchors.margins: 8
+                }
               }
             }
           }
@@ -109,6 +121,7 @@ Window {
               if (text.trim() === "") return
               const nextMessages = root.messages.slice()
               nextMessages.push({ role: "user", text: text })
+              nextMessages.push({ role: "assistent", text: "Hola, gilipollas!" })
               root.messages = nextMessages
               text = ""
           }
