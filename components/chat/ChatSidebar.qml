@@ -2,31 +2,38 @@ import QtQuick
 import QtQuick.Controls
 import Quickshell
 import "."
+import "../../services/chat"
 
 Window {
   id: root
   width: 420
   height: screen.height * 0.7
 
-  property bool isLoading: false
   property string ollamaBaseUrl: "http://localhost:11434"
   property string modelName: "qwen3:8b"
   property string systemPrompt: "Eres un asistente útil y amigable. Responde a las preguntas de los usuarios de manera clara y concisa. Si no sabes la respuesta, di que no lo sabes. Siempre mantén un tono profesional y respetuoso."
+  property bool debugNetwork: false
 
-  ChatService {
-    id: chatService
+  ChatStorageService {
+    id: storageService
+  }
+
+  OllamaChatService {
+    id: modelService
     ollamaBaseUrl: root.ollamaBaseUrl
     modelName: root.modelName
+    systemPrompt: root.systemPrompt
+    debugNetwork: root.debugNetwork
 
     onAssistantMessage: (role, content) => {
       const nextMessages = root.messages.slice()
       nextMessages.push({ role: role, content: content })
       root.messages = nextMessages
-      chatService.saveMessage(role, content)
+      storageService.saveMessage(role, content)
     }
 
     onRequestFailed: (status, errorText) => {
-      console.error("ChatService error:", status, errorText)
+      console.error("OllamaChatService error:", status, errorText)
     }
   }
 
@@ -35,11 +42,11 @@ Window {
 
   Component.onCompleted: {
     x = screen.width - width
-    chatService.initializeStorage()
-    const persistedMessages = chatService.loadMessages()
+    storageService.initialize()
+    const persistedMessages = storageService.loadMessages()
     if (persistedMessages.length > 0)
       root.messages = persistedMessages
-    scrollToBottom()
+    scrollToBottom(true)
   }
   onWidthChanged: x = screen.width - width
   onScreenChanged: x = screen.width - width
@@ -65,31 +72,64 @@ Window {
       anchors.margins: 16
       spacing: 12
 
-      // Header
       Text {
         id: headerText
         text: "AI Chat"
         font.pixelSize: 18
-        color: "#FFFFFF" 
+        color: "#FFFFFF"
       }
-      
-      ChatMessageList {
-        id: chatArea
+
+      Item {
+        id: chatContainer
         width: parent.width
         height: parent.height - headerText.height - inputContainer.height - parent.spacing * 2
-        messages: root.messages
+
+        ChatMessageList {
+          id: chatArea
+          anchors.fill: parent
+          messages: root.messages
+        }
+
+        Rectangle {
+          id: scrollToBottomButton
+          visible: !chatArea.isAtBottom
+          width: 32
+          height: 32
+          radius: 16
+          color: "#222"
+          border.color: "#3a3a3a"
+          opacity: scrollButtonMouse.containsMouse ? 1.0 : 0.9
+          anchors.right: parent.right
+          anchors.bottom: parent.bottom
+          anchors.margins: 12
+
+          Text {
+            anchors.centerIn: parent
+            text: "↓"
+            color: "#fff"
+            font.pixelSize: 16
+          }
+
+          MouseArea {
+            id: scrollButtonMouse
+            anchors.fill: parent
+            hoverEnabled: true
+            onClicked: root.scrollToBottom(true, true)
+          }
+        }
       }
 
       ChatInputBox {
         id: inputContainer
         width: parent.width
-        isLoading: chatService.isLoading
+        isLoading: modelService.isLoading
         onSendMessage: (text) => {
           const nextMessages = root.messages.slice()
           nextMessages.push({ role: "user", content: text })
           root.messages = nextMessages
-          chatService.saveMessage("user", text)
-          chatService.sendMessage(text, root.messages)
+          storageService.saveMessage("user", text)
+          modelService.sendMessage(root.messages)
+          root.scrollToBottom(true, true)
         }
       }
     }
@@ -99,7 +139,7 @@ Window {
     scrollToBottom()
   }
 
-  function scrollToBottom() {
-    chatArea.scrollToBottom()
+  function scrollToBottom(force = false, animated = true) {
+    chatArea.scrollToBottom(force, animated)
   }
 }

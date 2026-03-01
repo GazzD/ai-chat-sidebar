@@ -1,6 +1,6 @@
 import QtQuick
 import Quickshell
-import "components"
+import "components/chat"
 
 ShellRoot {
   id: root
