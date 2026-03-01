@@ -2,17 +2,23 @@ import QtQuick
 import QtQuick.Controls
 import "."
 
+// Scrollable conversation list.
+// Keeps track of whether the user is reading old messages and only auto-scrolls
+// when already near the bottom (unless forced by caller).
 ScrollView {
   id: root
 
   property var messages: []
+  // Internal auto-scroll gate toggled by user scrolling position.
   property bool shouldAutoScroll: true
+  // Exposed to UI (e.g., show/hide the "scroll to bottom" button).
   property bool isAtBottom: true
 
   clip: true
 
   NumberAnimation {
     id: scrollAnimation
+    // Smooth scroll when jumping to latest message.
     duration: 360
     easing.type: Easing.InOutCubic
     onFinished: {
@@ -26,6 +32,7 @@ ScrollView {
     ignoreUnknownSignals: true
 
     function onContentYChanged() {
+      // Track bottom proximity with a small threshold to avoid flickering.
       const bottom = Math.max(0, target.contentHeight - root.height)
       root.isAtBottom = target.contentY >= bottom - 10
       root.shouldAutoScroll = root.isAtBottom
@@ -50,6 +57,7 @@ ScrollView {
 
   function scrollToBottom(force = false, animated = true) {
     Qt.callLater(() => {
+      // Respect user scroll position unless an explicit force was requested.
       if (!force && !root.shouldAutoScroll) return
       if (root.contentItem) {
         const bottom = Math.max(0, root.contentItem.contentHeight - root.height)

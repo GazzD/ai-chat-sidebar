@@ -1,10 +1,13 @@
 import QtQuick
 import QtQuick.LocalStorage
 
+// Persistence layer for chat history.
+// Encapsulates SQLite operations so UI components stay storage-agnostic.
 QtObject {
   id: root
 
   function initialize() {
+    // Creates schema once (idempotent).
     const db = getDb()
     db.transaction(function(tx) {
       tx.executeSql(
@@ -14,6 +17,7 @@ QtObject {
   }
 
   function loadMessages() {
+    // Returns messages ordered by creation timestamp for deterministic replay.
     const db = getDb()
     let messages = []
     db.transaction(function(tx) {
@@ -27,6 +31,7 @@ QtObject {
   }
 
   function saveMessage(role, content) {
+    // Simple append-only persistence for conversation turns.
     const db = getDb()
     db.transaction(function(tx) {
       tx.executeSql(
@@ -37,6 +42,7 @@ QtObject {
   }
 
   function getDb() {
+    // Shared local database handle for this feature scope.
     return LocalStorage.openDatabaseSync(
       "chat_history",
       "1.0",

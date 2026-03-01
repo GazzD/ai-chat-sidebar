@@ -1,5 +1,7 @@
 import QtQuick
 
+// Network layer for chat completions against Ollama.
+// Responsible for HTTP request lifecycle and response parsing only.
 QtObject {
   id: root
 
@@ -8,12 +10,14 @@ QtObject {
   property string modelName: "qwen3:8b"
   property string systemPrompt: ""
   property bool think: true
+  // Debug toggle to print outgoing payloads.
   property bool debugNetwork: true
 
   signal assistantMessage(string role, string content)
   signal requestFailed(int status, string errorText)
 
   function sendMessage(conversationMessages) {
+    // Marks UI as busy until the request completes.
     root.isLoading = true
 
     const xhr = new XMLHttpRequest()
@@ -34,6 +38,7 @@ QtObject {
 
       try {
         const response = JSON.parse(xhr.responseText)
+        // Emit normalized assistant payload to keep UI logic simple.
         if (response.message && response.message.content) {
           root.assistantMessage(response.message.role, response.message.content)
         } else {
@@ -45,6 +50,7 @@ QtObject {
     }
 
     const messagesForRequest = root.systemPrompt.trim() !== ""
+      // Inject system instruction at request time without persisting it as a chat turn.
       ? [{ role: "system", content: root.systemPrompt }].concat(conversationMessages)
       : conversationMessages
 
@@ -56,6 +62,7 @@ QtObject {
     }
 
     if (root.debugNetwork) {
+      // Helpful while tuning prompts/model params during development.
       const payload = JSON.stringify(requestData, null, 2)
       console.log("[REQ] POST", root.ollamaBaseUrl + "/api/chat")
       console.log("[REQ] Headers: Content-Type: application/json")

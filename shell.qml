@@ -2,10 +2,12 @@ import QtQuick
 import Quickshell
 import "components/chat"
 
+// App entrypoint for Quickshell.
+// This file only wires top-level visibility/state and mounts the chat sidebar.
 ShellRoot {
   id: root
 
-  // Toggle manual
+  // Manual toggle for the sidebar window visibility.
   property bool sidebarVisible: true
 
   ChatSidebar {

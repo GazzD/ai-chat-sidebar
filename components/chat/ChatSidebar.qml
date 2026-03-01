@@ -4,6 +4,11 @@ import Quickshell
 import "."
 import "../../services/chat"
 
+// Main chat window/orchestrator.
+// Responsibilities:
+// 1) Manage view-level state (messages list and layout).
+// 2) Coordinate service calls (storage + model).
+// 3) Connect user interactions to message lifecycle.
 Window {
   id: root
   width: 420
@@ -12,6 +17,7 @@ Window {
   property string ollamaBaseUrl: "http://localhost:11434"
   property string modelName: "qwen3:8b"
   property string systemPrompt: "Eres un asistente útil y amigable. Responde a las preguntas de los usuarios de manera clara y concisa. Si no sabes la respuesta, di que no lo sabes. Siempre mantén un tono profesional y respetuoso."
+  // Enables HTTP payload logging from the model service.
   property bool debugNetwork: false
 
   ChatStorageService {
@@ -26,9 +32,11 @@ Window {
     debugNetwork: root.debugNetwork
 
     onAssistantMessage: (role, content) => {
+      // Keep in-memory conversation in sync with model responses.
       const nextMessages = root.messages.slice()
       nextMessages.push({ role: role, content: content })
       root.messages = nextMessages
+      // Persist assistant output so history survives restarts.
       storageService.saveMessage(role, content)
     }
 
@@ -41,6 +49,7 @@ Window {
   y: 0
 
   Component.onCompleted: {
+    // Place the sidebar on the right edge and restore persisted history.
     x = screen.width - width
     storageService.initialize()
     const persistedMessages = storageService.loadMessages()
@@ -124,11 +133,16 @@ Window {
         width: parent.width
         isLoading: modelService.isLoading
         onSendMessage: (text) => {
+          // Add the user message immediately for responsive UX.
           const nextMessages = root.messages.slice()
           nextMessages.push({ role: "user", content: text })
           root.messages = nextMessages
+
+          // Persist first, then request model completion with full conversation.
           storageService.saveMessage("user", text)
           modelService.sendMessage(root.messages)
+
+          // Force smooth scroll because the user just sent a new message.
           root.scrollToBottom(true, true)
         }
       }
@@ -140,6 +154,7 @@ Window {
   }
 
   function scrollToBottom(force = false, animated = true) {
+    // Delegate scroll behavior to the list component so logic stays centralized.
     chatArea.scrollToBottom(force, animated)
   }
 }
